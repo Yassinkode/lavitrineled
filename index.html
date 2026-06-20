@@ -322,7 +322,6 @@ a{color:inherit;text-decoration:none}
 
 <script>
 (function(){
-  var EMAIL_TO = "contact@lavitrineled.fr"; // <-- email de secours (mailto)
   var commerce = "";
   var step = 1, TOTAL = 3;
   var labels = ["Votre commerce","Votre projet","Vos coordonnées"];
@@ -382,19 +381,6 @@ a{color:inherit;text-decoration:none}
     };
   }
 
-  function buildMailto(p){
-    var lines = [
-      "Nouvelle demande de contact - La Vitrine LED","",
-      "Type de commerce : " + p.commerce,
-      "Nom : " + p.nom,
-      "Telephone : " + p.tel,
-      "Email : " + p.email,
-      "",
-      "Projet : " + (p.projet || "-")
-    ];
-    return "mailto:"+EMAIL_TO+"?subject="+encodeURIComponent("Contact - "+p.commerce)+"&body="+encodeURIComponent(lines.join("\n"));
-  }
-
   function showSuccess(){
     $("#formArea").style.display = "none";
     $("#success").classList.add("show");
@@ -408,21 +394,26 @@ a{color:inherit;text-decoration:none}
     btn.disabled = true; btn.textContent = "Envoi en cours…";
     $("#formError").classList.remove("show");
 
+    function fail(msg){
+      var e = $("#formError");
+      e.textContent = msg;
+      e.classList.add("show");
+      btn.disabled = false; btn.textContent = original;
+    }
+
     fetch("/api/contact", {
       method:"POST",
       headers:{"Content-Type":"application/json"},
       body: JSON.stringify(p)
     })
-    .then(function(r){ return r.json().then(function(d){ return {ok:r.ok, d:d}; }); })
+    .then(function(r){ return r.json().catch(function(){return {};}).then(function(d){ return {ok:r.ok, d:d}; }); })
     .then(function(res){
       if(res.ok && res.d && res.d.ok){ showSuccess(); }
-      else { throw new Error((res.d && res.d.error) || "Erreur d'envoi"); }
+      else { fail("L'envoi n'a pas fonctionné. Merci de réessayer dans un instant."); }
     })
     .catch(function(){
-      window.location.href = buildMailto(p);
-      showSuccess();
-    })
-    .then(function(){ btn.disabled=false; btn.textContent=original; });
+      fail("Connexion impossible. Vérifiez votre réseau et réessayez.");
+    });
   }
 
   $("#nextBtn").addEventListener("click", function(){
